@@ -7,6 +7,7 @@ import com.example.android_mvvm_kotlin.BuildConfig
 import com.example.android_mvvm_kotlin.data.DataRepository
 import com.example.android_mvvm_kotlin.helpers.AppPref
 import com.example.android_mvvm_kotlin.helpers.ConnectivityInterceptor
+import com.example.android_mvvm_kotlin.helpers.MyApplication
 import com.example.android_mvvm_kotlin.network.WebService
 import com.example.android_mvvm_kotlin.utils.Constants
 import com.example.android_mvvm_kotlin.utils.UnauthorizedInterceptor
@@ -16,6 +17,7 @@ import dagger.Module
 import dagger.Provides
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.internal.platform.Platform
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
@@ -61,8 +63,8 @@ class AppModule {
 
     @Provides
     @Singleton
-    fun provideContext(application: Application): Context {
-        return application
+    fun provideContext(application: MyApplication): Context {
+        return application.applicationContext
     }
 
     @Provides
@@ -79,10 +81,43 @@ class AppModule {
 
     @Provides
     @Singleton
-    fun provideAppPrefs(): AppPref {
-        return AppPref.instance!!
+    fun provideAppPrefs(context: Context): AppPref {
+        return AppPref(context)
     }
 
+    @Provides
+    @Singleton
+    fun providesHttpLoggingInterceptor(): HttpLoggingInterceptor {
+        val interceptor = HttpLoggingInterceptor()
+        interceptor.level = HttpLoggingInterceptor.Level.BODY
+        return interceptor
+    }
+
+    @Provides
+    @Singleton
+    internal fun provideOkHttp(interceptor: HttpLoggingInterceptor): OkHttpClient {
+        return OkHttpClient.Builder()
+            .addNetworkInterceptor(interceptor)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    internal fun provideRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .addConverterFactory(GsonConverterFactory.create())
+            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+            .baseUrl(BuildConfig.BASE_ENDPOINT)
+            .client(client)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    internal fun provideApi(retrofit: Retrofit): WebService {
+        return retrofit.create(WebService::class.java)
+    }
+/*
     @Provides
     @Singleton
     fun providesApiService(retrofit: Retrofit): WebService {
@@ -104,7 +139,7 @@ class AppModule {
     @Singleton
     fun providesOkHttpClient(httpLoggingInterceptor: HttpLoggingInterceptor?, context: Context?, appPref: AppPref): OkHttpClient {
         val builder = OkHttpClient.Builder()
-            .connectTimeout(Constants.getConnectionTimeOut(), TimeUnit.MINUTES)
+            .connectTimeout(Constants.CONNECTION_TIME_OUT.toLong(), TimeUnit.MINUTES)
             .readTimeout(Constants.getConnectionTimeOut(), TimeUnit.MINUTES)
             .writeTimeout(Constants.getConnectionTimeOut(), TimeUnit.MINUTES)
         builder.hostnameVerifier { hostname: String?, session: SSLSession? -> true }
@@ -117,7 +152,7 @@ class AppModule {
             val original = chain.request()
             val requestBuilder = original.newBuilder()
                 .addHeader("Accept", "application/json")
-            val userToken: String = appPref.authToken!!
+            val userToken: String = appPref.authToken
             if (!TextUtils.isEmpty(userToken)) {
                 requestBuilder.addHeader("Authorization", "Bearer $userToken")
             }
@@ -125,13 +160,5 @@ class AppModule {
             chain.proceed(request)
         }
         return builder.build()
-    }
-
-    @Provides
-    @Singleton
-    fun providesHttpLoggingInterceptor(): HttpLoggingInterceptor {
-        val interceptor = HttpLoggingInterceptor()
-        interceptor.level = HttpLoggingInterceptor.Level.BODY
-        return interceptor
-    }
+    }*/
 }

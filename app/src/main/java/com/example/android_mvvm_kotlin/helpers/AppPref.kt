@@ -3,8 +3,10 @@ package com.example.android_mvvm_kotlin.helpers
 import android.content.Context
 import android.content.SharedPreferences
 import com.google.gson.Gson
+import java.security.AccessController.getContext
+import javax.inject.Inject
 
-class AppPref(private val context: Context) {
+class AppPref @Inject constructor(private val context: Context) {
 
     fun saveAuthToken(authToken: String?) {
         editor.putString(KEY_AUTH_TOKEN, authToken)
@@ -35,14 +37,6 @@ class AppPref(private val context: Context) {
         private const val PRIVATE_MODE = 0
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_USER = "auth_token"
-        val instance: AppPref?
-            get() {
-                if (singleTonInstance == null) {
-                    singleTonInstance =
-                        AppPref(MyApplication.instance!!.getApplicationContext())
-                }
-                return singleTonInstance
-            }
     }
 
     init {
